@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>WhatsApp → Telegram · Formatting Converter</title>
+  <meta name="description" content="Convert WhatsApp formatting (*bold*, _italic_, ~strike~) to Telegram or Markdown. Offline, private, whitespace-perfect.">
+  <meta name="color-scheme" content="dark light">
+  <script>
+    (function () { try { var s = JSON.parse(localStorage.getItem('wa2tg.settings') || '{}'); var t = s.theme;
+      if (t !== 'dark' && t !== 'light') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', t); } catch (e) {} })();
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#input">Skip to editor</a>
+
+  <!-- Atmosphere -->
+  <div class="aurora" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <canvas id="stars" class="layer-stars" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+  <canvas id="fx" class="layer-fx" aria-hidden="true"></canvas>
+  <div class="cursor" id="cursor" aria-hidden="true"><span class="cursor__dot"></span></div>
+
+  <header class="topbar reveal" style="--i:0">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+        <defs>
+          <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#25D366"/><stop offset=".55" stop-color="#22d3ee"/><stop offset="1" stop-color="#8b5cf6"/>
+          </linearGradient>
+        </defs>
+        <path class="logo__bubble" d="M12 7h24a7 7 0 0 1 7 7v14a7 7 0 0 1-7 7H22l-9 7v-7h-1a7 7 0 0 1-7-7V14a7 7 0 0 1 7-7z" fill="url(#lg)"/>
+        <g class="logo__dots" fill="#fff"><circle cx="16" cy="21" r="2.6"/><circle cx="24" cy="21" r="2.6"/><circle cx="32" cy="21" r="2.6"/></g>
+        <path class="logo__plane" d="M13 21.5l20-8-4.5 16-5.5-4.5-3 3.5v-5.5l8.5-7.5-10.5 6z" fill="#fff"/>
+        <path class="logo__glint" d="M41 3l1.2 3.3L45.5 7.5l-3.3 1.2L41 12l-1.2-3.3L36.5 7.5l3.3-1.2z" fill="#fff"/>
+      </svg>
+      <span class="brand__name">WA<span class="brand__arrow">→</span>TG</span>
+    </div>
+    <nav class="topbar__actions" aria-label="App">
+      <button class="btn btn--icon btn--ghost" id="btn-shortcuts" type="button" aria-label="Keyboard shortcuts" data-tip="Shortcuts (?)">
+        <svg viewBox="0 0 24 24" class="ico"><rect x="2" y="6" width="20" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>
+      </button>
+      <button class="btn btn--icon btn--ghost" id="btn-theme" type="button" aria-label="Toggle theme" data-tip="Theme (Mod+D)">
+        <svg viewBox="0 0 24 24" class="ico ico--theme"><circle class="sun" cx="12" cy="12" r="4.2"/><path class="rays" d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/><path class="moon" d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+      </button>
+      <button class="btn btn--icon btn--ghost" id="btn-settings" type="button" aria-label="Settings" data-tip="Settings (Mod+,)">
+        <svg viewBox="0 0 24 24" class="ico ico--gear"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero glass tilt reveal" style="--i:1" aria-labelledby="title">
+      <p class="eyebrow"><span class="dot"></span> Offline · Private · Whitespace-perfect</p>
+      <h1 id="title">WhatsApp formatting, <span class="grad">ready for Telegram</span></h1>
+      <p class="typer" aria-hidden="true"><code class="typer__from"></code><span class="typer__arrow">→</span><code class="typer__to"></code><span class="typer__caret"></span></p>
+      <p class="sr-only">For example, *bold* becomes **bold** and _italic_ becomes __italic__.</p>
+      <p class="hero__sub">Paste a message or drop a <kbd>.txt</kbd>. Spaces, emoji and Hindi stay exactly as they are. Only the formatting markers change.</p>
+      <div class="chips" role="group" aria-label="Load a sample">
+        <button class="chip tilt" type="button" data-sample="murli">📦 Box sample</button>
+        <button class="chip tilt" type="button" data-sample="features">✨ All features</button>
+        <button class="chip tilt" type="button" data-sample="edge">🧪 Edge cases</button>
+      </div>
+    </section>
+
+    <section class="workspace" id="workspace">
+      <!-- INPUT -->
+      <div class="pane glass reveal" id="pane-in" style="--i:2">
+        <span class="pane__ring" aria-hidden="true"></span>
+        <div class="pane__head">
+          <h2 class="pane__title"><span class="badge badge--wa">WA</span> WhatsApp</h2>
+          <div class="toolbar">
+            <button class="btn btn--icon" id="btn-paste" type="button" aria-label="Paste from clipboard" data-tip="Paste">
+              <svg viewBox="0 0 24 24" class="ico ico--paste"><path d="M9 3h6v3H9z"/><path d="M15 4.5h2a2 2 0 0 1 2 2V10M9 4.5H7a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h4"/><path d="M14 16h7M18 13l3 3-3 3"/></svg>
+            </button>
+            <button class="btn btn--icon" id="btn-open" type="button" aria-label="Open text file" data-tip="Open .txt file">
+              <svg viewBox="0 0 24 24" class="ico ico--file"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 17v-6M9.5 13.5 12 11l2.5 2.5"/></svg>
+            </button>
+            <button class="btn btn--icon" id="btn-undo" type="button" aria-label="Undo" data-tip="Undo (Mod+Z)" disabled>
+              <svg viewBox="0 0 24 24" class="ico ico--undo"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+            </button>
+            <button class="btn btn--icon" id="btn-clear" type="button" aria-label="Clear input" data-tip="Clear (Mod+K)">
+              <svg viewBox="0 0 24 24" class="ico ico--trash"><path class="lid" d="M3 6h18M9 6V4h6v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg>
+            </button>
+            <input type="file" id="file" accept=".txt,.md,text/plain" hidden>
+          </div>
+        </div>
+        <div class="editor" id="editor">
+          <div class="editor__mirror" id="mirror" aria-hidden="true"></div>
+          <textarea class="editor__input" id="input" spellcheck="false" autocomplete="off" autocapitalize="off"
+            aria-label="WhatsApp text input" placeholder="Paste or type WhatsApp text…  *bold*  _italic_  ~strike~"></textarea>
+          <div class="empty" id="empty-in" aria-hidden="true">
+            <svg viewBox="0 0 160 110" class="empty__art">
+              <rect class="b1" x="10" y="14" width="86" height="34" rx="14"/><rect class="b2" x="62" y="58" width="88" height="34" rx="14"/>
+              <path class="l1" d="M26 31h40M26 31h0"/><path class="l2" d="M78 75h50"/>
+              <path class="sp" d="M132 18l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>
+            </svg>
+            <p class="empty__hint">Type, paste, or drop a chat export here</p>
+          </div>
+          <div class="drop" id="drop" aria-hidden="true">
+            <svg class="drop__border" preserveAspectRatio="none"><rect x="2" y="2" rx="18"/></svg>
+            <svg viewBox="0 0 24 24" class="ico drop__arrow"><path d="M12 4v13M6 11l6 6 6-6M5 21h14"/></svg>
+            <p>Drop your chat here</p>
+          </div>
+        </div>
+        <div class="pane__foot">
+          <span><b class="num" id="st-chars">0</b> chars</span>
+          <span><b class="num" id="st-words">0</b> words</span>
+          <span><b class="num" id="st-lines">0</b> lines</span>
+        </div>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="pane glass reveal" id="pane-out" style="--i:3">
+        <span class="pane__ring" aria-hidden="true"></span>
+        <div class="pane__head">
+          <div class="tabs" role="tablist" aria-label="Output view">
+            <span class="tabs__pill" aria-hidden="true"></span>
+            <button class="tab" role="tab" id="tab-raw" aria-selected="true" aria-controls="panel-raw" type="button">
+              <svg viewBox="0 0 24 24" class="ico"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg><span id="raw-label">Telegram</span></button>
+            <button class="tab" role="tab" id="tab-preview" aria-selected="false" aria-controls="panel-preview" tabindex="-1" type="button">
+              <svg viewBox="0 0 24 24" class="ico"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Preview</span></button>
+          </div>
+          <div class="toolbar">
+            <div class="seg seg--sm" role="radiogroup" aria-label="Output format">
+              <label><input type="radio" name="format" value="telegram" data-setting="format"><span>Telegram</span></label>
+              <label><input type="radio" name="format" value="markdown" data-setting="format"><span>Markdown</span></label>
+            </div>
+            <button class="btn btn--icon" id="btn-rich" type="button" aria-label="Copy preview as rich text" data-tip="Copy as rich text">
+              <svg viewBox="0 0 24 24" class="ico"><path d="M4 7V5h11v2M9.5 5v14M7.5 19h4"/><path d="M15 12h6M15 16h6M17 20h4"/></svg>
+            </button>
+            <button class="btn btn--icon" id="btn-download" type="button" aria-label="Download file" data-tip="Download (Mod+S)">
+              <svg viewBox="0 0 24 24" class="ico ico--down"><path class="arrow" d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+            </button>
+            <button class="btn btn--primary magnetic" id="btn-copy" type="button" data-tip="Copy (Mod+Enter)">
+              <span class="btn__icons" aria-hidden="true">
+                <svg viewBox="0 0 24 24" class="ico ico--clip"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+                <svg viewBox="0 0 24 24" class="ico ico--check"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+              </span>
+              <span class="btn__label">Copy</span>
+            </button>
+          </div>
+        </div>
+        <div class="output">
+          <div class="panel" id="panel-raw" role="tabpanel" aria-labelledby="tab-raw" tabindex="0">
+            <pre class="out-raw" id="out-raw"></pre>
+          </div>
+          <div class="panel" id="panel-preview" role="tabpanel" aria-labelledby="tab-preview" tabindex="0" hidden>
+            <div class="out-preview" id="out-preview"></div>
+          </div>
+          <div class="empty empty--out" id="empty-out" aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="ico empty__plane"><path d="M3 11.5l18-7.5-4 16-5-4-3 3.5v-5l8-7-10 5.5z"/></svg>
+            <p class="empty__hint">Your Telegram-ready text appears here ✨</p>
+          </div>
+        </div>
+        <div class="pane__foot pane__foot--out">
+          <span class="conv"><b class="num" id="st-total">0</b> conversions</span>
+          <ul class="kinds" id="kinds" aria-label="Conversion breakdown">
+            <li class="kind kind--bold" data-k="bold" hidden><b class="num">0</b> bold</li>
+            <li class="kind kind--italic" data-k="italic" hidden><b class="num">0</b> italic</li>
+            <li class="kind kind--strike" data-k="strike" hidden><b class="num">0</b> strike</li>
+            <li class="kind kind--keep" data-k="kept" hidden><b class="num">0</b> kept</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer reveal" style="--i:4">
+    <span>Made with ✨, works 100% offline</span>
+    <button class="link" id="btn-tests" type="button">Run self-tests</button>
+    <span class="footer__egg">psst… type <kbd>sparkle</kbd></span>
+  </footer>
+
+  <!-- Settings drawer -->
+  <dialog class="drawer" id="settings" aria-labelledby="settings-title">
+    <div class="drawer__inner">
+      <header class="dlg__head"><h2 id="settings-title">Settings</h2>
+        <button class="btn btn--icon btn--ghost" data-close type="button" aria-label="Close settings"><svg viewBox="0 0 24 24" class="ico"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+      <div class="drawer__body">
+        <fieldset class="set"><legend>Output format</legend>
+          <div class="seg" role="radiogroup" aria-label="Output format">
+            <label><input type="radio" name="format2" value="telegram" data-setting="format"><span>Telegram</span></label>
+            <label><input type="radio" name="format2" value="markdown" data-setting="format"><span>Markdown</span></label>
+          </div>
+          <p class="hint">Telegram: <code>**bold**</code> <code>__italic__</code> <code>~~strike~~</code>. Markdown: <code>**bold**</code> <code>*italic*</code>, and <code>* item</code> becomes <code>- item</code>.</p>
+        </fieldset>
+        <fieldset class="set"><legend>Theme</legend>
+          <div class="seg" role="radiogroup" aria-label="Theme">
+            <label><input type="radio" name="theme" value="system" data-setting="theme"><span>System</span></label>
+            <label><input type="radio" name="theme" value="dark" data-setting="theme"><span>Dark</span></label>
+            <label><input type="radio" name="theme" value="light" data-setting="theme"><span>Light</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="set"><legend>Experience</legend>
+          <label class="switch-row"><span>Starfield &amp; aurora effects</span><span class="switch"><input type="checkbox" role="switch" data-setting="effects"><span class="switch__track"><span class="switch__thumb"></span></span></span></label>
+          <label class="switch-row"><span>Cursor sparkle trail</span><span class="switch"><input type="checkbox" role="switch" data-setting="trail"><span class="switch__track"><span class="switch__thumb"></span></span></span></label>
+          <label class="switch-row"><span>Sound effects</span><span class="switch"><input type="checkbox" role="switch" data-setting="sound"><span class="switch__track"><span class="switch__thumb"></span></span></span></label>
+        </fieldset>
+        <button class="btn btn--ghost btn--wide" id="btn-reset" type="button">Reset to defaults</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Shortcuts -->
+  <dialog class="modal" id="shortcuts" aria-labelledby="sc-title">
+    <div class="modal__inner">
+      <header class="dlg__head"><h2 id="sc-title">Keyboard shortcuts</h2>
+        <button class="btn btn--icon btn--ghost" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="ico"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+      <dl class="keys">
+        <dt><kbd data-mod></kbd><kbd>Enter</kbd></dt><dd>Copy output</dd>
+        <dt><kbd data-mod></kbd><kbd>Shift</kbd><kbd>C</kbd></dt><dd>Copy output</dd>
+        <dt><kbd data-mod></kbd><kbd>K</kbd></dt><dd>Clear input</dd>
+        <dt><kbd data-mod></kbd><kbd>S</kbd></dt><dd>Download</dd>
+        <dt><kbd data-mod></kbd><kbd>,</kbd></dt><dd>Settings</dd>
+        <dt><kbd data-mod></kbd><kbd>D</kbd></dt><dd>Toggle theme</dd>
+        <dt><kbd>?</kbd></dt><dd>This overlay</dd>
+      </dl>
+    </div>
+  </dialog>
+
+  <!-- Self-tests -->
+  <dialog class="modal modal--wide" id="tests" aria-labelledby="tests-title">
+    <div class="modal__inner">
+      <header class="dlg__head"><h2 id="tests-title">Self-tests</h2>
+        <button class="btn btn--icon btn--ghost" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24" class="ico"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+      <div class="tests__summary" id="tests-summary"></div>
+      <ol class="tests__list" id="tests-list"></ol>
+    </div>
+  </dialog>
+
+  <div class="toasts" id="toasts"></div>
+  <div class="sr-only" id="live" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="converter.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
